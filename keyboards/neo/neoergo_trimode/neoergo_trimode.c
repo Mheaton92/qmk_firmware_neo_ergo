@@ -20,6 +20,10 @@ uint8_t blink_index  = 0;
 bool    blink_fast   = true;
 bool    blink_slow   = true;
 
+//MH
+static bool usb_prev_state = false;
+static uint8_t last_wireless_devs = DEVS_2G4;
+
 // Implement a circular linked list of devices to support FN+TAB device
 // selection
 struct devs_list {
@@ -304,6 +308,28 @@ void board_init(void) {
 // Force MCU reset on unhandled_exception
 void _unhandled_exception(void) {
     mcu_reset();
+}
+
+//MH
+void housekeeping_task_kb(void) {
+    bool usb_now = gpio_read_pin(BT_CABLE_PIN);
+
+    //USB plugged in
+    if (usb_now && !usb_prev_state) {
+        if (wireless_get_current_devs() != DEVS_USB) {
+            last_wireless_devs = wireless_get_current_devs();
+            wireless_devs_change(wireless_get_current_devs(), DEVS_USB, false);
+        }
+    }
+
+    //USB unplugged
+    if (!usb_now && usb_prev_state) {
+        if (last_wireless_devs != DEVS_USB) {
+            wireless_devs_change(wireless_get_current_devs(), last_wireless_devs, false);
+        }
+    }
+
+    usb_prev_state = usb_now;
 }
 
 // Exprimental change to fix duplicate and hung key presses on wireless

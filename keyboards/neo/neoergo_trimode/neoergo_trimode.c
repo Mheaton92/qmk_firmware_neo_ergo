@@ -317,7 +317,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     uncomment line below and enable console
     */
 
-    // uprintf("Battery: %d%%\n", battery_percent);
+    //uprintf("Battery: %d%% | Dev: %d\n", *md_getp_bat(), confinfo.devs);
 
     // Blink timing
     blink_index++;
@@ -400,7 +400,7 @@ else{
         blink_battery(7, 255, 0, 0, blink_fast);
         blink_battery(12, 255, 0, 0, blink_fast);
 
-    } else if (battery_percent < 15) {
+    } else if (battery_percent < 20) {
 
         blink_battery(5, 255, 0, 0, blink_slow);
         blink_battery(6, 255, 0, 0, blink_slow);
@@ -409,21 +409,21 @@ else{
     } else {
 
         if (battery_percent >= 80) {
-            set_indicator_battery(5, 0, 255, 0);
-            set_indicator_battery(6, 0, 255, 0);
-            set_indicator_battery(7, 0, 255, 0);
+            set_indicator_battery(5, 0, 255, 0); //changed to blue from yellow for colorblindness on all mid
+			set_indicator_battery(6, 0, 255, 0);
+			set_indicator_battery(7, 0, 255, 0);
 
         } else if (battery_percent >= 58) {
-            set_indicator_battery(5, 255, 255, 0);
-            set_indicator_battery(6, 255, 255, 0);
-            set_indicator_battery(7, 255, 255, 0);
+			set_indicator_battery(5, 0, 0, 255);
+			set_indicator_battery(6, 0, 0, 255);
+			set_indicator_battery(7, 0, 0, 255);
 
         } else if (battery_percent >= 36) {
-            set_indicator_battery(5, 255, 255, 0);
-            set_indicator_battery(6, 255, 255, 0);
+			set_indicator_battery(5, 0, 0, 255);
+			set_indicator_battery(6, 0, 0, 255);
 
         } else {
-            set_indicator_battery(5, 255, 255, 0);
+            set_indicator_battery(5, 0, 0, 255);
         }
     }
 

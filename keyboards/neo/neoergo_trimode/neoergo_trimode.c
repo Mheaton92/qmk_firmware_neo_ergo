@@ -330,6 +330,14 @@ switch (confinfo.devs) {
         rgb_matrix_set_color(10, 255, 255, 255);
     }
 
+
+// --- Momentary Layer Indicator (LED 9) ---
+if (layer_state_is(1)) {
+    rgb_matrix_set_color(9, 255, 204, 255);
+} else {
+    rgb_matrix_set_color(9, 0, 0, 0);
+}
+
     return true;
 }
 

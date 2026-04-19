@@ -5,6 +5,29 @@
 #include QMK_KEYBOARD_H
 #include "wireless.h"
 
+static bool rgb_fake_off = false;
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+
+    if (record->event.pressed) {
+
+        if (keycode == RGB_TOG) {
+
+            rgb_fake_off = !rgb_fake_off;
+
+            if (rgb_fake_off) {
+                rgb_matrix_sethsv_noeeprom(0, 0, 0); // brightness = 0
+            } else {
+                rgb_matrix_sethsv_noeeprom(0, 255, 255); // restore (temporary)
+            }
+
+            return false; // block real toggle
+        }
+    }
+
+    return true;
+}
+
 typedef union {
     uint32_t raw;
     struct {
@@ -167,6 +190,7 @@ void md_devs_change(uint8_t devs, bool reset) {
     }
 }
 
+
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     if (process_record_user(keycode, record) != true) {
         return false;
@@ -238,39 +262,51 @@ void blink(uint8_t key_index, uint8_t r, uint8_t g, uint8_t b, bool blink) {
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
+	blink_index++;
+	blink_fast = (blink_index % 64 == 0) ? !blink_fast : blink_fast;
+	blink_slow = (blink_index % 128 == 0) ? !blink_slow : blink_slow;
+
     // Always run user indicators
-    rgb_matrix_indicators_advanced_user(led_min, led_max);
+    //rgb_matrix_indicators_advanced_user(led_min, led_max);
+
+    // --- Clear ONLY indicator LEDs ---
+    for (uint8_t i = 0; i <= 7; i++) {
+        rgb_matrix_set_color(i, 0, 0, 0);
+    }
+    rgb_matrix_set_color(10, 0, 0, 0);
 
     // --- Connection indicators ---
     switch (confinfo.devs) {
-        case DEVS_USB:
-            rgb_matrix_set_color(DEVS_USB_INDEX, RGB_ADJ_WHITE);
-            break;
 
-        case DEVS_BT1:
-            rgb_matrix_set_color(DEVS_BT1_INDEX, RGB_ADJ_WHITE);
-            break;
+    case DEVS_USB:
+        rgb_matrix_set_color(0, 255, 255, 255);
+        break;
 
-        case DEVS_BT2:
-            rgb_matrix_set_color(DEVS_BT2_INDEX, RGB_ADJ_WHITE);
-            break;
+    case DEVS_BT1:
+        blink(1, 255, 255, 255, blink_fast);
+        break;
 
-        case DEVS_BT3:
-            rgb_matrix_set_color(DEVS_BT3_INDEX, RGB_ADJ_WHITE);
-            break;
+    case DEVS_BT2:
+        blink(2, 255, 255, 255, blink_fast);
+        break;
 
-        case DEVS_2G4:
-            rgb_matrix_set_color(DEVS_2G4_INDEX, RGB_ADJ_WHITE);
-            break;
-    }
+    case DEVS_BT3:
+        blink(3, 255, 255, 255, blink_fast);
+        break;
 
-    // --- Caps Lock (ONLY ONE LED) ---
+    case DEVS_2G4:
+        blink(4, 255, 255, 255, blink_fast);
+        break;
+}
+
+    // --- Caps Lock ---
     if (host_keyboard_led_state().caps_lock) {
-        rgb_matrix_set_color(DEVS_USB_INDEX, RGB_ADJ_WHITE);
+        rgb_matrix_set_color(10, 255, 255, 255);
     }
 
     return true;
 }
+
 
 // Temporary work around for WS2812 pin init
 void board_init(void) {

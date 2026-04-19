@@ -306,12 +306,7 @@ void set_indicator_battery(uint8_t index, uint8_t r, uint8_t g, uint8_t b) {
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
-    // Keep RGB alive even if toggled off
-    if (!rgb_matrix_is_enabled()) {
-        rgb_matrix_enable_noeeprom();
-    }
-
-    uint8_t battery_percent = *md_getp_bat();
+   uint8_t battery_percent = *md_getp_bat();
 
     // Debug (optional)
 
@@ -329,11 +324,6 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     blink_fast = (blink_index % 64 == 0) ? !blink_fast : blink_fast;
     blink_slow = (blink_index % 128 == 0) ? !blink_slow : blink_slow;
 
-	// Clear indicator LEDs ONLY
-	for (uint8_t i = 0; i <= 12; i++) {
-		rgb_matrix_set_color(i, 0, 0, 0);
-	}
-
     uint8_t state = *md_getp_state();
 
     // CONNECTION INDICATORS
@@ -349,7 +339,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
             } else if (state != MD_STATE_CONNECTED) {
                 blink(1, 255, 255, 255, blink_slow);
             } else {
-                rgb_matrix_set_color(1, 255, 255, 255);
+                set_indicator(1, 255, 255, 255);
             }
             break;
 
@@ -389,10 +379,16 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         set_indicator(10, 255, 255, 255);
     }
 
-    // FN LAYER (LED 9)
-    if (layer_state_is(1)) {
-        set_indicator(9, 255, 204, 255);
-    }
+    // FN LAYERS (LED 9)
+    if (layer_state_is(2)) {
+    set_indicator(9, 255, 255, 0);
+}
+else if(layer_state_is(1)) {
+	set_indicator(9, 0, 255, 255);
+}
+else{
+    set_indicator(9, 0, 0, 0);
+}
 
 
     // BATTERY (LEDs 5–7, 12)

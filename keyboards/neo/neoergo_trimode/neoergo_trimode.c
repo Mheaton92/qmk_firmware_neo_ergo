@@ -275,27 +275,53 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     }
     rgb_matrix_set_color(10, 0, 0, 0);
 
-    // --- Connection indicators ---
-    switch (confinfo.devs) {
+// --- Connection indicators ---
+uint8_t state = *md_getp_state();
+
+switch (confinfo.devs) {
 
     case DEVS_USB:
         rgb_matrix_set_color(0, 255, 255, 255);
         break;
 
     case DEVS_BT1:
-        blink(1, 255, 255, 255, blink_fast);
+        if (state == MD_STATE_PAIRING) {
+            blink(1, 255, 255, 255, blink_fast);
+        } else if (state != MD_STATE_CONNECTED) {
+            blink(1, 255, 255, 255, blink_slow);
+        } else {
+            rgb_matrix_set_color(1, 255, 255, 255);
+        }
         break;
 
     case DEVS_BT2:
-        blink(2, 255, 255, 255, blink_fast);
+        if (state == MD_STATE_PAIRING) {
+            blink(2, 255, 255, 255, blink_fast);
+        } else if (state != MD_STATE_CONNECTED) {
+            blink(2, 255, 255, 255, blink_slow);
+        } else {
+            rgb_matrix_set_color(2, 255, 255, 255);
+        }
         break;
 
     case DEVS_BT3:
-        blink(3, 255, 255, 255, blink_fast);
+        if (state == MD_STATE_PAIRING) {
+            blink(3, 255, 255, 255, blink_fast);
+        } else if (state != MD_STATE_CONNECTED) {
+            blink(3, 255, 255, 255, blink_slow);
+        } else {
+            rgb_matrix_set_color(3, 255, 255, 255);
+        }
         break;
 
     case DEVS_2G4:
-        blink(4, 255, 255, 255, blink_fast);
+        if (state == MD_STATE_PAIRING) {
+            blink(4, 255, 255, 255, blink_fast);
+        } else if (state != MD_STATE_CONNECTED) {
+            blink(4, 255, 255, 255, blink_slow);
+        } else {
+            rgb_matrix_set_color(4, 255, 255, 255);
+        }
         break;
 }
 

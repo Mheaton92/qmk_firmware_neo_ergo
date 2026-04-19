@@ -11,17 +11,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
     if (record->event.pressed) {
 
-        if (keycode == RGB_TOG) {
+        switch (keycode) {
 
-            rgb_fake_off = !rgb_fake_off;
+            case RGB_TOG:
+                rgb_fake_off = !rgb_fake_off;
 
-            if (rgb_fake_off) {
-                rgb_matrix_sethsv_noeeprom(0, 0, 0); // brightness = 0
-            } else {
-                rgb_matrix_sethsv_noeeprom(0, 255, 255); // restore (temporary)
-            }
+                if (rgb_fake_off) {
+                    rgb_matrix_sethsv_noeeprom(0, 0, 0);
+                } else {
+                    rgb_matrix_sethsv_noeeprom(0, 255, 255);
+                }
+                return false;
 
-            return false; // block real toggle
         }
     }
 
@@ -154,6 +155,13 @@ void wireless_post_task(void) {
         wireless_devs_change(!confinfo.devs, confinfo.devs, false);
         post_init_timer = 0x00;
     }
+
+		static uint16_t battery_timer = 0;
+
+	if (timer_elapsed(battery_timer) > 2000) {
+		md_inquire_bat();
+		battery_timer = timer_read();
+}
 }
 
 void md_devs_change(uint8_t devs, bool reset) {
@@ -262,6 +270,11 @@ void blink(uint8_t key_index, uint8_t r, uint8_t g, uint8_t b, bool blink) {
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
+	uint8_t battery_percent = *md_getp_bat();
+
+	//Human readable print out for bat for testing
+	uprintf("Battery: %d%%\n", battery_percent);
+
 	blink_index++;
 	blink_fast = (blink_index % 64 == 0) ? !blink_fast : blink_fast;
 	blink_slow = (blink_index % 128 == 0) ? !blink_slow : blink_slow;
@@ -337,6 +350,57 @@ if (layer_state_is(1)) {
 } else {
     rgb_matrix_set_color(9, 0, 0, 0);
 }
+
+//bat new start
+// Battery Indicator
+
+// clear
+rgb_matrix_set_color(5, 0, 0, 0);
+rgb_matrix_set_color(6, 0, 0, 0);
+rgb_matrix_set_color(7, 0, 0, 0);
+rgb_matrix_set_color(12, 0, 0, 0);
+
+//Critical battery
+if (battery_percent < 5) {
+
+    blink(5, 255, 0, 0, blink_fast);
+    blink(6, 255, 0, 0, blink_fast);
+    blink(7, 255, 0, 0, blink_fast);
+    blink(12, 255, 0, 0, blink_fast);
+
+}
+
+//Low battery
+else if (battery_percent < 15) {
+
+    blink(5, 255, 0, 0, blink_slow);
+    blink(6, 255, 0, 0, blink_slow);
+    blink(7, 255, 0, 0, blink_slow);
+
+}
+
+//Normal battery
+else {
+
+    if (battery_percent >= 80) {
+        rgb_matrix_set_color(5, 0, 255, 0);
+        rgb_matrix_set_color(6, 0, 255, 0);
+        rgb_matrix_set_color(7, 0, 255, 0);
+
+    } else if (battery_percent >= 58) {
+        rgb_matrix_set_color(5, 255, 255, 0);
+        rgb_matrix_set_color(6, 255, 255, 0);
+        rgb_matrix_set_color(7, 255, 255, 0);
+
+    } else if (battery_percent >= 36) {
+        rgb_matrix_set_color(5, 255, 255, 0);
+        rgb_matrix_set_color(6, 255, 255, 0);
+
+    } else {
+        rgb_matrix_set_color(5, 255, 255, 0);
+    }
+}
+//bat new end
 
     return true;
 }
@@ -441,4 +505,13 @@ void wireless_send_nkro(report_nkro_t *report) {
     extern host_driver_t wireless_driver;
     wireless_driver.send_keyboard(&temp_report_keyboard);
     md_send_nkro(wls_report_nkro);
+}
+//battery polling
+void housekeeping_task_user(void) {
+    static uint16_t battery_timer = 0;
+
+    if (timer_elapsed(battery_timer) > 2000) { // every 2 seconds
+        md_inquire_bat();
+        battery_timer = timer_read();
+    }
 }

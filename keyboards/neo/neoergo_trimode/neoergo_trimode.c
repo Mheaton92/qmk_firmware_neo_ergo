@@ -270,137 +270,125 @@ void blink(uint8_t key_index, uint8_t r, uint8_t g, uint8_t b, bool blink) {
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
-	uint8_t battery_percent = *md_getp_bat();
-
-	//Human readable print out for bat for testing
-	uprintf("Battery: %d%%\n", battery_percent);
-
-	blink_index++;
-	blink_fast = (blink_index % 64 == 0) ? !blink_fast : blink_fast;
-	blink_slow = (blink_index % 128 == 0) ? !blink_slow : blink_slow;
-
-    // Always run user indicators
-    //rgb_matrix_indicators_advanced_user(led_min, led_max);
-
-    // --- Clear ONLY indicator LEDs ---
-    for (uint8_t i = 0; i <= 7; i++) {
-        rgb_matrix_set_color(i, 0, 0, 0);
+    // Keep RGB alive even if toggled off
+    if (!rgb_matrix_is_enabled()) {
+        rgb_matrix_enable_noeeprom();
     }
-    rgb_matrix_set_color(10, 0, 0, 0);
 
-// --- Connection indicators ---
-uint8_t state = *md_getp_state();
+    uint8_t battery_percent = *md_getp_bat();
 
-switch (confinfo.devs) {
+    // Debug (optional)
 
-    case DEVS_USB:
-        rgb_matrix_set_color(0, 255, 255, 255);
-        break;
+    /* Must turn off the following in rules.mk,
+    MOUSEKEY_ENABLE
+    EXTRAKEY_ENABLE
+    NKRO_ENABLE
+    uncomment line below and enable console
+    */
 
-    case DEVS_BT1:
-        if (state == MD_STATE_PAIRING) {
-            blink(1, 255, 255, 255, blink_fast);
-        } else if (state != MD_STATE_CONNECTED) {
-            blink(1, 255, 255, 255, blink_slow);
-        } else {
-            rgb_matrix_set_color(1, 255, 255, 255);
-        }
-        break;
+    // uprintf("Battery: %d%%\n", battery_percent);
 
-    case DEVS_BT2:
-        if (state == MD_STATE_PAIRING) {
-            blink(2, 255, 255, 255, blink_fast);
-        } else if (state != MD_STATE_CONNECTED) {
-            blink(2, 255, 255, 255, blink_slow);
-        } else {
-            rgb_matrix_set_color(2, 255, 255, 255);
-        }
-        break;
+    // Blink timing
+    blink_index++;
+    blink_fast = (blink_index % 64 == 0) ? !blink_fast : blink_fast;
+    blink_slow = (blink_index % 128 == 0) ? !blink_slow : blink_slow;
 
-    case DEVS_BT3:
-        if (state == MD_STATE_PAIRING) {
-            blink(3, 255, 255, 255, blink_fast);
-        } else if (state != MD_STATE_CONNECTED) {
-            blink(3, 255, 255, 255, blink_slow);
-        } else {
-            rgb_matrix_set_color(3, 255, 255, 255);
-        }
-        break;
+    uint8_t state = *md_getp_state();
 
-    case DEVS_2G4:
-        if (state == MD_STATE_PAIRING) {
-            blink(4, 255, 255, 255, blink_fast);
-        } else if (state != MD_STATE_CONNECTED) {
-            blink(4, 255, 255, 255, blink_slow);
-        } else {
-            rgb_matrix_set_color(4, 255, 255, 255);
-        }
-        break;
-}
+    // CONNECTION INDICATORS
+    switch (confinfo.devs) {
 
-    // --- Caps Lock ---
+        case DEVS_USB:
+            rgb_matrix_set_color(0, 255, 255, 255);
+            break;
+
+        case DEVS_BT1:
+            if (state == MD_STATE_PAIRING) {
+                blink(1, 255, 255, 255, blink_fast);
+            } else if (state != MD_STATE_CONNECTED) {
+                blink(1, 255, 255, 255, blink_slow);
+            } else {
+                rgb_matrix_set_color(1, 255, 255, 255);
+            }
+            break;
+
+        case DEVS_BT2:
+            if (state == MD_STATE_PAIRING) {
+                blink(2, 255, 255, 255, blink_fast);
+            } else if (state != MD_STATE_CONNECTED) {
+                blink(2, 255, 255, 255, blink_slow);
+            } else {
+                rgb_matrix_set_color(2, 255, 255, 255);
+            }
+            break;
+
+        case DEVS_BT3:
+            if (state == MD_STATE_PAIRING) {
+                blink(3, 255, 255, 255, blink_fast);
+            } else if (state != MD_STATE_CONNECTED) {
+                blink(3, 255, 255, 255, blink_slow);
+            } else {
+                rgb_matrix_set_color(3, 255, 255, 255);
+            }
+            break;
+
+        case DEVS_2G4:
+            if (state == MD_STATE_PAIRING) {
+                blink(4, 255, 255, 255, blink_fast);
+            } else if (state != MD_STATE_CONNECTED) {
+                blink(4, 255, 255, 255, blink_slow);
+            } else {
+                rgb_matrix_set_color(4, 255, 255, 255);
+            }
+            break;
+    }
+
+    // CAPS LOCK
     if (host_keyboard_led_state().caps_lock) {
         rgb_matrix_set_color(10, 255, 255, 255);
     }
 
+    // FN LAYER (LED 9)
+    if (layer_state_is(1)) {
+        rgb_matrix_set_color(9, 255, 204, 255);
+    }
 
-// --- Momentary Layer Indicator (LED 9) ---
-if (layer_state_is(1)) {
-    rgb_matrix_set_color(9, 255, 204, 255);
-} else {
-    rgb_matrix_set_color(9, 0, 0, 0);
-}
 
-//bat new start
-// Battery Indicator
+    // BATTERY (LEDs 5–7, 12)
 
-// clear
-rgb_matrix_set_color(5, 0, 0, 0);
-rgb_matrix_set_color(6, 0, 0, 0);
-rgb_matrix_set_color(7, 0, 0, 0);
-rgb_matrix_set_color(12, 0, 0, 0);
+    if (battery_percent < 5) {
 
-//Critical battery
-if (battery_percent < 5) {
+        blink(5, 255, 0, 0, blink_fast);
+        blink(6, 255, 0, 0, blink_fast);
+        blink(7, 255, 0, 0, blink_fast);
+        blink(12, 255, 0, 0, blink_fast);
 
-    blink(5, 255, 0, 0, blink_fast);
-    blink(6, 255, 0, 0, blink_fast);
-    blink(7, 255, 0, 0, blink_fast);
-    blink(12, 255, 0, 0, blink_fast);
+    } else if (battery_percent < 15) {
 
-}
-
-//Low battery
-else if (battery_percent < 15) {
-
-    blink(5, 255, 0, 0, blink_slow);
-    blink(6, 255, 0, 0, blink_slow);
-    blink(7, 255, 0, 0, blink_slow);
-
-}
-
-//Normal battery
-else {
-
-    if (battery_percent >= 80) {
-        rgb_matrix_set_color(5, 0, 255, 0);
-        rgb_matrix_set_color(6, 0, 255, 0);
-        rgb_matrix_set_color(7, 0, 255, 0);
-
-    } else if (battery_percent >= 58) {
-        rgb_matrix_set_color(5, 255, 255, 0);
-        rgb_matrix_set_color(6, 255, 255, 0);
-        rgb_matrix_set_color(7, 255, 255, 0);
-
-    } else if (battery_percent >= 36) {
-        rgb_matrix_set_color(5, 255, 255, 0);
-        rgb_matrix_set_color(6, 255, 255, 0);
+        blink(5, 255, 0, 0, blink_slow);
+        blink(6, 255, 0, 0, blink_slow);
+        blink(7, 255, 0, 0, blink_slow);
 
     } else {
-        rgb_matrix_set_color(5, 255, 255, 0);
+
+        if (battery_percent >= 80) {
+            rgb_matrix_set_color(5, 0, 255, 0);
+            rgb_matrix_set_color(6, 0, 255, 0);
+            rgb_matrix_set_color(7, 0, 255, 0);
+
+        } else if (battery_percent >= 58) {
+            rgb_matrix_set_color(5, 255, 255, 0);
+            rgb_matrix_set_color(6, 255, 255, 0);
+            rgb_matrix_set_color(7, 255, 255, 0);
+
+        } else if (battery_percent >= 36) {
+            rgb_matrix_set_color(5, 255, 255, 0);
+            rgb_matrix_set_color(6, 255, 255, 0);
+
+        } else {
+            rgb_matrix_set_color(5, 255, 255, 0);
+        }
     }
-}
-//bat new end
 
     return true;
 }
@@ -506,12 +494,4 @@ void wireless_send_nkro(report_nkro_t *report) {
     wireless_driver.send_keyboard(&temp_report_keyboard);
     md_send_nkro(wls_report_nkro);
 }
-//battery polling
-void housekeeping_task_user(void) {
-    static uint16_t battery_timer = 0;
 
-    if (timer_elapsed(battery_timer) > 2000) { // every 2 seconds
-        md_inquire_bat();
-        battery_timer = timer_read();
-    }
-}

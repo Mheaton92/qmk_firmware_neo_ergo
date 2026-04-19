@@ -4,8 +4,11 @@
 
 #include QMK_KEYBOARD_H
 #include "wireless.h"
+#include "custom_keycodes.h"
 
 static bool rgb_fake_off = false;
+
+uint8_t indicator_brightness = 128; //0-255
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
@@ -23,6 +26,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 }
                 return false;
 
+            case IND_BRIGHT_DN:
+                if (indicator_brightness > 16)
+                    indicator_brightness -= 16;
+                return false;
+
+            case IND_BRIGHT_UP:
+                if (indicator_brightness < 240)
+                    indicator_brightness += 16;
+                return false;
         }
     }
 
@@ -39,6 +51,8 @@ typedef union {
 confinfo_t confinfo;
 
 uint32_t post_init_timer = 0x00;
+
+
 
 uint8_t blink_index  = 0;
 bool    blink_fast   = true;
@@ -61,6 +75,9 @@ struct devs_list devs[] = {
 };
 
 struct devs_list *current_dev = &devs[0]; // Default circular linked list to USB device
+
+void set_indicator(uint8_t index, uint8_t r, uint8_t g, uint8_t b);
+void set_indicator_battery(uint8_t index, uint8_t r, uint8_t g, uint8_t b);
 
 // Hack
 void md_send_devinfo(const char *name);
@@ -154,15 +171,13 @@ void wireless_post_task(void) {
         md_send_devctrl(MD_SND_CMD_DEVCTRL_SLEEP_2G4_EN); // timeout 30min to sleep in 2.4g mode, enable
         wireless_devs_change(!confinfo.devs, confinfo.devs, false);
         post_init_timer = 0x00;
-    }
-
-		static uint16_t battery_timer = 0;
-
+		}
+	static uint16_t battery_timer = 0;
 	if (timer_elapsed(battery_timer) > 2000) {
 		md_inquire_bat();
 		battery_timer = timer_read();
-}
-}
+		}
+	}
 
 void md_devs_change(uint8_t devs, bool reset) {
     switch (devs) {
@@ -262,10 +277,31 @@ void wireless_devs_change_kb(uint8_t old_devs, uint8_t new_devs, bool reset) {
 
 void blink(uint8_t key_index, uint8_t r, uint8_t g, uint8_t b, bool blink) {
     if (blink) {
-        rgb_matrix_set_color(key_index, r, g, b);
+        set_indicator(key_index, r, g, b);
+    } else {
+        set_indicator(key_index, RGB_OFF);
+    }
+}
+
+void blink_battery(uint8_t key_index, uint8_t r, uint8_t g, uint8_t b, bool blink) {
+    if (blink) {
+        set_indicator_battery(key_index, r, g, b);
     } else {
         rgb_matrix_set_color(key_index, RGB_OFF);
     }
+}
+
+void set_indicator(uint8_t index, uint8_t r, uint8_t g, uint8_t b){
+	rgb_matrix_set_color(
+		index,
+		(r * indicator_brightness) / 255,
+		(g * indicator_brightness) / 255,
+		(b * indicator_brightness) / 255
+		);
+	}
+
+void set_indicator_battery(uint8_t index, uint8_t r, uint8_t g, uint8_t b) {
+    rgb_matrix_set_color(index, r, g, b);
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
@@ -293,13 +329,18 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     blink_fast = (blink_index % 64 == 0) ? !blink_fast : blink_fast;
     blink_slow = (blink_index % 128 == 0) ? !blink_slow : blink_slow;
 
+	// Clear indicator LEDs ONLY
+	for (uint8_t i = 0; i <= 12; i++) {
+		rgb_matrix_set_color(i, 0, 0, 0);
+	}
+
     uint8_t state = *md_getp_state();
 
     // CONNECTION INDICATORS
     switch (confinfo.devs) {
 
         case DEVS_USB:
-            rgb_matrix_set_color(0, 255, 255, 255);
+            set_indicator(0, 255, 255, 255);
             break;
 
         case DEVS_BT1:
@@ -345,12 +386,12 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
     // CAPS LOCK
     if (host_keyboard_led_state().caps_lock) {
-        rgb_matrix_set_color(10, 255, 255, 255);
+        set_indicator(10, 255, 255, 255);
     }
 
     // FN LAYER (LED 9)
     if (layer_state_is(1)) {
-        rgb_matrix_set_color(9, 255, 204, 255);
+        set_indicator(9, 255, 204, 255);
     }
 
 
@@ -358,35 +399,35 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
     if (battery_percent < 5) {
 
-        blink(5, 255, 0, 0, blink_fast);
-        blink(6, 255, 0, 0, blink_fast);
-        blink(7, 255, 0, 0, blink_fast);
-        blink(12, 255, 0, 0, blink_fast);
+        blink_battery(5, 255, 0, 0, blink_fast);
+        blink_battery(6, 255, 0, 0, blink_fast);
+        blink_battery(7, 255, 0, 0, blink_fast);
+        blink_battery(12, 255, 0, 0, blink_fast);
 
     } else if (battery_percent < 15) {
 
-        blink(5, 255, 0, 0, blink_slow);
-        blink(6, 255, 0, 0, blink_slow);
-        blink(7, 255, 0, 0, blink_slow);
+        blink_battery(5, 255, 0, 0, blink_slow);
+        blink_battery(6, 255, 0, 0, blink_slow);
+        blink_battery(7, 255, 0, 0, blink_slow);
 
     } else {
 
         if (battery_percent >= 80) {
-            rgb_matrix_set_color(5, 0, 255, 0);
-            rgb_matrix_set_color(6, 0, 255, 0);
-            rgb_matrix_set_color(7, 0, 255, 0);
+            set_indicator_battery(5, 0, 255, 0);
+            set_indicator_battery(6, 0, 255, 0);
+            set_indicator_battery(7, 0, 255, 0);
 
         } else if (battery_percent >= 58) {
-            rgb_matrix_set_color(5, 255, 255, 0);
-            rgb_matrix_set_color(6, 255, 255, 0);
-            rgb_matrix_set_color(7, 255, 255, 0);
+            set_indicator_battery(5, 255, 255, 0);
+            set_indicator_battery(6, 255, 255, 0);
+            set_indicator_battery(7, 255, 255, 0);
 
         } else if (battery_percent >= 36) {
-            rgb_matrix_set_color(5, 255, 255, 0);
-            rgb_matrix_set_color(6, 255, 255, 0);
+            set_indicator_battery(5, 255, 255, 0);
+            set_indicator_battery(6, 255, 255, 0);
 
         } else {
-            rgb_matrix_set_color(5, 255, 255, 0);
+            set_indicator_battery(5, 255, 255, 0);
         }
     }
 

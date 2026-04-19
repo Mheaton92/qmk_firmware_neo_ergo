@@ -20,11 +20,6 @@ uint8_t blink_index  = 0;
 bool    blink_fast   = true;
 bool    blink_slow   = true;
 
-//MH
-/*
-static bool usb_prev_state = false;
-static uint8_t last_wireless_devs = DEVS_2G4;
-*/
 
 // Implement a circular linked list of devices to support FN+TAB device
 // selection
@@ -242,66 +237,36 @@ void blink(uint8_t key_index, uint8_t r, uint8_t g, uint8_t b, bool blink) {
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
-    if (!rgb_matrix_is_enabled()) {
-        return false;
-    }
 
-    blink_index = blink_index + 1;
-    blink_fast  = (blink_index % 64 == 0) ? !blink_fast : blink_fast;
-    blink_slow  = (blink_index % 128 == 0) ? !blink_slow : blink_slow;
-
+    // Always run user indicators
     rgb_matrix_indicators_advanced_user(led_min, led_max);
 
+    // --- Connection indicators ---
     switch (confinfo.devs) {
-        case DEVS_USB: {
+        case DEVS_USB:
             rgb_matrix_set_color(DEVS_USB_INDEX, RGB_ADJ_WHITE);
-        } break;
+            break;
 
-        case DEVS_BT1: {
-            if (*md_getp_state() == MD_STATE_PAIRING) {
-                blink(DEVS_BT1_INDEX, RGB_ADJ_WHITE, blink_fast);
-            } else if (*md_getp_state() != MD_STATE_CONNECTED) {
-                blink(DEVS_BT1_INDEX, RGB_ADJ_WHITE, blink_slow);
-            } else {
-                rgb_matrix_set_color(DEVS_BT1_INDEX, RGB_ADJ_WHITE);
-            }
-        } break;
+        case DEVS_BT1:
+            rgb_matrix_set_color(DEVS_BT1_INDEX, RGB_ADJ_WHITE);
+            break;
 
-        case DEVS_BT2: {
-            if (*md_getp_state() == MD_STATE_PAIRING) {
-                blink(DEVS_BT2_INDEX, RGB_ADJ_WHITE, blink_fast);
-            } else if (*md_getp_state() != MD_STATE_CONNECTED) {
-                blink(DEVS_BT2_INDEX, RGB_ADJ_WHITE, blink_slow);
-            } else {
-                rgb_matrix_set_color(DEVS_BT2_INDEX, RGB_ADJ_WHITE);
-            }
-        } break;
+        case DEVS_BT2:
+            rgb_matrix_set_color(DEVS_BT2_INDEX, RGB_ADJ_WHITE);
+            break;
 
-        case DEVS_BT3: {
-            if (*md_getp_state() == MD_STATE_PAIRING) {
-                blink(DEVS_BT3_INDEX, RGB_ADJ_WHITE, blink_fast);
-            } else if (*md_getp_state() != MD_STATE_CONNECTED) {
-                blink(DEVS_BT3_INDEX, RGB_ADJ_WHITE, blink_slow);
-            } else {
-                rgb_matrix_set_color(DEVS_BT3_INDEX, RGB_ADJ_WHITE);
-            }
-        } break;
+        case DEVS_BT3:
+            rgb_matrix_set_color(DEVS_BT3_INDEX, RGB_ADJ_WHITE);
+            break;
 
-        case DEVS_2G4: {
-            if (*md_getp_state() == MD_STATE_PAIRING) {
-                blink(DEVS_2G4_INDEX, RGB_ADJ_WHITE, blink_fast);
-            } else if (*md_getp_state() != MD_STATE_CONNECTED) {
-                blink(DEVS_2G4_INDEX, RGB_ADJ_WHITE, blink_slow);
-            } else {
-                rgb_matrix_set_color(DEVS_2G4_INDEX, RGB_ADJ_WHITE);
-            }
-        } break;
+        case DEVS_2G4:
+            rgb_matrix_set_color(DEVS_2G4_INDEX, RGB_ADJ_WHITE);
+            break;
     }
 
+    // --- Caps Lock (ONLY ONE LED) ---
     if (host_keyboard_led_state().caps_lock) {
-        for (uint8_t j = 0; j <= 15; j++) {
-            rgb_matrix_set_color(j, RGB_RED);
-        }
+        rgb_matrix_set_color(DEVS_USB_INDEX, RGB_ADJ_WHITE);
     }
 
     return true;
@@ -318,31 +283,6 @@ void _unhandled_exception(void) {
     mcu_reset();
 }
 
-//MH
-/*
-void housekeeping_task_user(void) {
-    bool usb_now = (wireless_get_current_devs() == DEVS_USB);
-
-    // USB plugged in
-    if (usb_now && !usb_prev_state) {
-        uint8_t current = wireless_get_current_devs();
-
-        if (current != DEVS_USB) {
-            last_wireless_devs = current;  // save current mode
-            wireless_devs_change(current, DEVS_USB, false);
-        }
-    }
-
-    // USB unplugged
-    if (!usb_now && usb_prev_state) {
-        if (last_wireless_devs != DEVS_USB) {
-            wireless_devs_change(wireless_get_current_devs(), last_wireless_devs, false);
-        }
-    }
-
-    usb_prev_state = usb_now;
-}
-*/
 
 // Exprimental change to fix duplicate and hung key presses on wireless
 void wireless_send_nkro(report_nkro_t *report) {

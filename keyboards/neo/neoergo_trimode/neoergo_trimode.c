@@ -6,6 +6,7 @@
 #include "wireless.h"
 #include "custom_keycodes.h"
 
+
 // Forward declarations for functions used across translation units
 void wireless_task(void);
 bool smsg_is_busy(void);
@@ -16,6 +17,7 @@ extern host_driver_t wireless_driver;
 // ──────────────────────────────────────────────
 
 static bool rgb_fake_off = false;
+static bool bat_debug_on = false;
 
 uint8_t indicator_brightness = 128; // 0-255
 
@@ -143,6 +145,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 bat_reporting    = true;
                 return false;
             }
+            case BAT_DBG:
+				bat_debug_on = !bat_debug_on;
+				if (!bat_debug_on) {
+					rgb_matrix_set_color(14, RGB_OFF);
+				}
+				return false;
         }
     }
 
@@ -171,8 +179,8 @@ void keyboard_post_init_kb(void) {
     //gpio_set_pin_output(DEVS_2G4_PIN);
 
     // Set GPIO as high input for battery charging state
-    // gpio_set_pin_input(BT_CABLE_PIN);
-    // gpio_set_pin_input_high(BT_CHARGE_PIN);
+    gpio_set_pin_input(BT_CABLE_PIN);
+    gpio_set_pin_input_high(BT_CHARGE_PIN);
 
     // Set USB_POWER_EN_PIN state before enabling the output to avoid instability
     if (confinfo.devs == DEVS_USB && gpio_read_pin(BT_CABLE_PIN)) {
@@ -228,12 +236,6 @@ void wireless_post_task(void) {
         md_send_devctrl(MD_SND_CMD_DEVCTRL_SLEEP_2G4_EN); // timeout 30min to sleep in 2.4g mode, enable
         wireless_devs_change(!confinfo.devs, confinfo.devs, false);
         post_init_timer = 0x00;
-    }
-
-    static uint16_t battery_timer = 0;
-    if (timer_elapsed(battery_timer) > 2000) {
-        md_inquire_bat();
-        battery_timer = timer_read();
     }
 }
 
@@ -395,7 +397,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     // e.g. 73% = 7 red flashes, then 3 blue flashes.
     // Skips all other indicators while the sequence is running.
     if (bat_reporting) {
-        if (timer_elapsed(bat_report_timer) >= 200) {
+        if (timer_elapsed(bat_report_timer) >= 500) {
             bat_report_timer = timer_read();
             bat_led_on = !bat_led_on;
 
@@ -479,22 +481,26 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     }
 
     // FN LAYERS (LED 9)
-    if (layer_state_is(2)) {
-        set_indicator(9, 255, 255, 0);
-    } else if (layer_state_is(1)) {
-        set_indicator(9, 0, 255, 255);
-    } else {
-        set_indicator(9, 0, 0, 0);
-    }
+    if (layer_state_is(3)) {
+		set_indicator(9, 255, 0, 255);  // magenta = QWERTY active
+	} else if (layer_state_is(2)) {
+		set_indicator(9, 255, 255, 0);  // yellow = FN2
+	} else if (layer_state_is(1)) {
+		set_indicator(9, 0, 255, 255);  // cyan = FN1
+	} else {
+		set_indicator(9, 0, 0, 0);      // off = base layer
+	}
 
     // BATTERY LEVEL (LEDs 5-7, 12)
     // Uses set_indicator_battery (full brightness) so warnings are always visible.
     if (battery_percent < 5) {
-        // Critical — all four LEDs fast-blink red
+        // Critical — Battery bar and LED 12 blink red
         blink_battery(5,  255, 0, 0, blink_fast);
         blink_battery(6,  255, 0, 0, blink_fast);
         blink_battery(7,  255, 0, 0, blink_fast);
-        blink_battery(12, 255, 0, 0, blink_fast);
+        if (!gpio_read_pin(BT_CABLE_PIN)) {
+			blink_battery(12, 255, 0, 0, blink_fast);
+		}
     } else if (battery_percent < 20) {
         // Low — three LEDs slow-blink red
         blink_battery(5, 255, 0, 0, blink_slow);
@@ -518,6 +524,35 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         }
     }
 
+    // CHARGING INDICATOR (LED 12)
+    // Runs after the battery level section so it can override LED 12 at any
+    // battery level. Critical blink (<5%) is the one exception — at that point
+    // the battery section already set LED 12 to fast red which is more urgent,
+    // and the cable is unlikely to be in at that point anyway.
+    // BT_CABLE_PIN  (B8): high when cable is plugged in
+    // BT_CHARGE_PIN (B9): low while charging, high when fully charged
+    {
+        bool cable_in    = gpio_read_pin(BT_CABLE_PIN);
+        bool charge_done = gpio_read_pin(BT_CHARGE_PIN);
+
+        if (cable_in) {
+            if (charge_done) {
+                // Fully charged — solid green.
+                // Hidden in USB/wired mode since you're plugged in anyway.
+                if (confinfo.devs != DEVS_USB) {
+                    set_indicator_battery(12, 0, 255, 0);
+                } else {
+                    set_indicator(12, RGB_OFF);
+                }
+            } else {
+                // Charging — slow amber pulse.
+                blink_battery(12, 255, 128, 0, blink_slow);
+            }
+        }
+        // Cable not connected: LED 12 left to the battery level section above
+        // (fast red blink at <5%, off otherwise).
+    }
+
 #ifdef BATTERY_DEBUG
     // Battery debug indicator on LED 14 (spare LED).
     // Changes color every 2% so you can visually confirm battery readings
@@ -535,7 +570,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     //   86%  -> Magenta
     //   84%  -> Orange
     //   ...repeats
-    static const uint8_t debug_colors[][3] = {
+	static const uint8_t debug_colors[][3] = {
         {0,   0,   255}, // Blue
         {255, 255, 0  }, // Yellow
         {0,   255, 0  }, // Green
@@ -545,10 +580,13 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         {255, 0,   255}, // Magenta
         {255, 128, 0  }, // Orange
     };
-    uint8_t color_index = ((100 - battery_percent) / 2) % 8;
+
+    if (bat_debug_on) {
+     uint8_t color_index = ((100 - battery_percent) / 2) % 8;
     rgb_matrix_set_color(14, debug_colors[color_index][0],
                              debug_colors[color_index][1],
                              debug_colors[color_index][2]);
+	}
 #endif
 
     return true;

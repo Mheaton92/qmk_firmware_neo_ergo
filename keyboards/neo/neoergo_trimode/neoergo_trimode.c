@@ -18,6 +18,7 @@ extern host_driver_t wireless_driver;
 
 static bool rgb_fake_off = false;
 static bool bat_debug_on = false;
+static bool wpm_mode_on = false;
 
 uint8_t indicator_brightness = 128; // 0-255
 
@@ -153,6 +154,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 					rgb_matrix_set_color(14, RGB_OFF);
 				}
 				return false;
+
+            case WPM_TOG:
+                wpm_mode_on = !wpm_mode_on;
+                return false;
         }
     }
 
@@ -488,16 +493,33 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         set_indicator(10, 255, 255, 255);
     }
 
-    // FN LAYERS (LED 9)
-    if (layer_state_is(3)) {
-		set_indicator(9, 255, 0, 255);  // magenta = QWERTY active
-	} else if (layer_state_is(2)) {
-		set_indicator(9, 255, 255, 0);  // yellow = FN2
-	} else if (layer_state_is(1)) {
-		set_indicator(9, 0, 255, 255);  // cyan = FN1
-	} else {
-		set_indicator(9, 0, 0, 0);      // off = base layer
-	}
+    // FN LAYERS / WPM (LED 9)
+    if (wpm_mode_on) {
+        uint8_t wpm = get_current_wpm();
+        if (wpm >= 100) {
+            if (blink_fast) {
+                rgb_matrix_set_color_all(0, 0, 255);
+            } else {
+                rgb_matrix_set_color_all(RGB_OFF);
+            }
+        }else if (wpm >= 80) {
+            set_indicator(9, 0, 0, 255);
+        } else if (wpm >= 65) {
+            set_indicator(9, 0, 255, 0);
+        } else if (wpm >= 50) {
+            set_indicator(9, 255, 255, 0);
+        } else {
+            set_indicator(9, 255, 0, 0);
+        }
+    } else if (layer_state_is(3)) {
+        set_indicator(9, 255, 0, 255);
+    } else if (layer_state_is(2)) {
+        set_indicator(9, 255, 255, 0);
+    } else if (layer_state_is(1)) {
+        set_indicator(9, 0, 255, 255);
+    } else {
+        set_indicator(9, 0, 0, 0);
+    }
 
     // BATTERY LEVEL (LEDs 5-7, 12)
     // Uses set_indicator_battery (full brightness) so warnings are always visible.
@@ -516,15 +538,15 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         blink_battery(7, 255, 0, 0, blink_slow);
     } else {
         if (battery_percent >= 80) {
-            // Full — green (changed from yellow for colorblindness accessibility)
+
             set_indicator_battery(5, 0, 255, 0);
             set_indicator_battery(6, 0, 255, 0);
             set_indicator_battery(7, 0, 255, 0);
-        } else if (battery_percent >= 58) {
+        } else if (battery_percent >= 60) {
             set_indicator_battery(5, 0, 0, 255);
             set_indicator_battery(6, 0, 0, 255);
             set_indicator_battery(7, 0, 0, 255);
-        } else if (battery_percent >= 36) {
+        } else if (battery_percent >= 40) {
             set_indicator_battery(5, 0, 0, 255);
             set_indicator_battery(6, 0, 0, 255);
         } else {

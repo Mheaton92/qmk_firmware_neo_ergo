@@ -399,6 +399,10 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         rgb_matrix_set_color_all(RGB_OFF);
     }
 
+    if (!rgb_matrix_indicators_advanced_user(led_min, led_max)) {
+        return false;
+    }
+
     // BATTERY READOUT (KC_BAT) — LED 14
     // Red flashes = tens digit, blue flashes = ones digit.
     // e.g. 73% = 7 red flashes, then 3 blue flashes.

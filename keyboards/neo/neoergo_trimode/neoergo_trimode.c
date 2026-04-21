@@ -25,6 +25,7 @@ uint8_t indicator_brightness = 128; // 0-255
 static bool     bat_reporting    = false;
 static uint16_t bat_report_timer = 0;
 static uint8_t  bat_flashes_done = 0;
+static uint8_t  bat_flashes_yellow  = 0;  // fifties digit of battery %
 static uint8_t  bat_flashes_red  = 0;  // tens digit of battery %
 static uint8_t  bat_flashes_blue = 0;  // ones digit of battery %
 static bool     bat_led_on       = false;
@@ -136,13 +137,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 // Trigger battery readout on LED 14.
                 // Red flashes = tens digit, blue flashes = ones digit.
                 // e.g. 73% = 7 red flashes then 3 blue flashes.
-                uint8_t pct      = *md_getp_bat();
-                bat_flashes_red  = pct / 10;
-                bat_flashes_blue = pct % 10;
-                bat_flashes_done = 0;
-                bat_led_on       = false;
-                bat_report_timer = timer_read();
-                bat_reporting    = true;
+                uint8_t pct        = *md_getp_bat();
+                bat_flashes_yellow = pct / 50;
+                bat_flashes_red    = (pct % 50) / 10;
+                bat_flashes_blue   = pct % 10;
+                bat_flashes_done   = 0;
+                bat_led_on         = false;
+                bat_report_timer   = timer_read();
+                bat_reporting      = true;
                 return false;
             }
             case BAT_DBG:
@@ -401,26 +403,32 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
             bat_report_timer = timer_read();
             bat_led_on = !bat_led_on;
 
-            if (bat_flashes_done < bat_flashes_red) {
-                // Red phase — tens digit
-                rgb_matrix_set_color(14, bat_led_on ? 255 : 0, 0, 0);
-                if (!bat_led_on) bat_flashes_done++;
-            } else if (bat_flashes_done < bat_flashes_red + bat_flashes_blue) {
-                // Blue phase — ones digit
-                rgb_matrix_set_color(14, 0, 0, bat_led_on ? 255 : 0);
-                if (!bat_led_on) bat_flashes_done++;
-            } else {
-                // Sequence complete
-                bat_reporting = false;
-                rgb_matrix_set_color(14, RGB_OFF);
-            }
+            if (bat_flashes_done < bat_flashes_yellow) {
+				// Yellow phase — fifties
+				rgb_matrix_set_color(14, bat_led_on ? 255 : 0, bat_led_on ? 255 : 0, 0);
+				if (!bat_led_on) bat_flashes_done++;
+			} else if (bat_flashes_done < bat_flashes_yellow + bat_flashes_red) {
+				// Red phase — tens
+				rgb_matrix_set_color(14, bat_led_on ? 255 : 0, 0, 0);
+				if (!bat_led_on) bat_flashes_done++;
+			} else if (bat_flashes_done < bat_flashes_yellow + bat_flashes_red + bat_flashes_blue) {
+				// Blue phase — ones
+				rgb_matrix_set_color(14, 0, 0, bat_led_on ? 255 : 0);
+				if (!bat_led_on) bat_flashes_done++;
+			} else {
+				// Sequence complete
+				bat_reporting = false;
+				rgb_matrix_set_color(14, RGB_OFF);
+			}
         } else {
             // Hold current LED state between timer ticks
-            if (bat_flashes_done < bat_flashes_red) {
-                rgb_matrix_set_color(14, bat_led_on ? 255 : 0, 0, 0);
-            } else {
-                rgb_matrix_set_color(14, 0, 0, bat_led_on ? 255 : 0);
-            }
+            if (bat_flashes_done < bat_flashes_yellow) {
+				rgb_matrix_set_color(14, bat_led_on ? 255 : 0, bat_led_on ? 255 : 0, 0);
+			} else if (bat_flashes_done < bat_flashes_yellow + bat_flashes_red) {
+				rgb_matrix_set_color(14, bat_led_on ? 255 : 0, 0, 0);
+			} else {
+				rgb_matrix_set_color(14, 0, 0, bat_led_on ? 255 : 0);
+			}
         }
         return true;
     }

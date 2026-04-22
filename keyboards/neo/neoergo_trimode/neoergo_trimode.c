@@ -452,15 +452,15 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     // CONNECTION INDICATORS (LEDs 0-4)
     switch (confinfo.devs) {
         case DEVS_USB:
-            set_indicator(0, 255, 255, 255);
+            set_indicator(0, RGB_IND_WHITE);
             break;
         case DEVS_BT1:
             if (state == MD_STATE_PAIRING) {
-                blink(1, 255, 255, 255, blink_fast);
+                blink(1, RGB_IND_WHITE, blink_fast);
             } else if (state != MD_STATE_CONNECTED) {
-                blink(1, 255, 255, 255, blink_slow);
+                blink(1, RGB_IND_WHITE, blink_slow);
             } else {
-                set_indicator(1, 255, 255, 255);
+                set_indicator(1, RGB_IND_WHITE);
             }
             break;
         case DEVS_BT2:
@@ -503,7 +503,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         if (wpm >= 100) {
             if (blink_fast) {
                 rgb_matrix_set_color_all(0, 0, 255);
-            } else {
+            } else
                 rgb_matrix_set_color_all(RGB_OFF);
             }
         }else if (wpm >= 80) {

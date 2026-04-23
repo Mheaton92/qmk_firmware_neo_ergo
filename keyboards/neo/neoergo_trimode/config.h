@@ -11,15 +11,15 @@
 #define WIRELESS_TAPPING_TERM 3000
 
 /* LEDS */
-#define RGB_ADJ_WHITE   0xC8, 0xC8, 0xC8
-#define RGB_IND_WHITE   0xFF, 0xFF, 0xFF
-#define RGB_IND_BLUE    0x00, 0x00, 0xFF
-#define RGB_IND_GREEN   0x00, 0xFF, 0x00
-#define RGB_IND_RED     0xFF, 0x00, 0x00
-#define RGB_IND_AMBER   0xFF, 0x80, 0x00
-#define RGB_IND_YELLOW  0xFF, 0xFF, 0x00
-#define RGB_IND_CYAN    0x00, 0xFF, 0xFF
-#define RGB_IND_MAGENTA 0xFF, 0x00, 0xFF
+#define RGB_ADJ_WHITE   0xC8, 0xC8, 0xC8    // Connection indicators
+#define RGB_IND_WHITE   0xFF, 0xFF, 0xFF    //
+#define RGB_IND_BLUE    0x00, 0x00, 0xFF    // Battery mid, WPM 80+
+#define RGB_IND_GREEN   0x00, 0xFF, 0x00    // Battery full, charge done
+#define RGB_IND_RED     0xFF, 0x00, 0x00    // Battery critical/low, WPM below 50
+#define RGB_IND_AMBER   0xFF, 0x80, 0x00    // Charging pulse
+#define RGB_IND_YELLOW  0xFF, 0xFF, 0x00    // Fn layer 2, WPM 50-65
+#define RGB_IND_CYAN    0x00, 0xFF, 0xFF    // Fn layer 1
+#define RGB_IND_MAGENTA 0xFF, 0x00, 0xFF    // QWERTY Layer
 
 #define DEVS_USB_INDEX  0
 #define DEVS_BT1_INDEX  1
